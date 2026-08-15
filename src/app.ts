@@ -40,14 +40,28 @@ export class App {
   }
 
   private initializeMiddlewares(): void {
+    // Build array of permitted origins (filters out undefined values)
+    const allowedOrigins = [
+      "http://localhost:5173",
+      process.env.FRONTEND_URL,
+    ].filter(Boolean) as string[];
+
     this.app.use(express.json());
     this.app.use(
       cors({
-        origin: [
-          process.env.FRONTEND_URL || "http://localhost:5173",
-          "https://hoppscotch.io", // Explicitly allow Hoppscotch
-        ],
-
+        origin: (origin, callback) => {
+          // Allow server-to-server / Postman calls (no origin)
+          // OR requests matching allowed origins or wildcard setting
+          if (
+            !origin ||
+            allowedOrigins.includes(origin) ||
+            process.env.FRONTEND_URL === "*"
+          ) {
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
         methods: ["GET", "POST", "PUT", "DELETE"],
         credentials: true,
       }),
@@ -62,7 +76,6 @@ export class App {
 
     this.logger.info("Middlewares initialized.");
   }
-
   private initializeRoutes(routes: Array<IRoute>): void {
     this.app.get("/health", (req: Request, res: Response) => {
       res.status(200).json({ status: "ok", message: "API is running" });
