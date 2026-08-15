@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model User {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String         @unique
+  password_hash String
+  name          String
+  created_at    DateTime       @default(now())
+  sessions      ChatSession[]
+  appointments  Appointment[]
+
+  @@map("users")
+}
+
+model ChatSession {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String        @db.Uuid
+  status     String        @default("active")
+  created_at DateTime      @default(now())
+  user       User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+
+  @@index([user_id])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  session_id String      @db.Uuid
+  sender     String      // 'user' or 'ai'
+  content    String      @db.Text
+  created_at DateTime    @default(now())
+  session    ChatSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id])
+  @@map("chat_messages")
+}
+
+model Appointment {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String   @db.Uuid
+  title            String
+  appointment_date DateTime
+  status           String   @default("pending")
+  created_at       DateTime @default(now())
+  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([appointment_date])
+  @@map("appointments")
+}
